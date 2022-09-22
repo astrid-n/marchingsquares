@@ -25,6 +25,8 @@
 
 #include <random>
 
+#define PI = acos(-1)
+
 namespace inviwo {
 
 /** \docpage{org.inviwo.MarchingSquares, Marching Squares}
@@ -80,6 +82,8 @@ protected:
                                       IndexBufferRAM* indexBuffer,
                                       std::vector<BasicMesh::Vertex>& vertices);
 
+    ScalarField2 gaussianFilter(const ScalarField2 field, ivec2 nVertPerDim, dvec2 bBoxMin, dvec2 bBoxMax);
+
 	float randomValue(const float min, const float max) const;
     // Ports
 public:
@@ -106,6 +110,7 @@ public:
     // Properties for multiple iso contours
     IntProperty propNumContours;
     TransferFunctionProperty propIsoTransferFunc;
+    BoolProperty propGaussianFilter;
 
     // Attributes
 private:

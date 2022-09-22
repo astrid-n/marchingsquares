@@ -40,7 +40,8 @@ MarchingSquares::MarchingSquares()
     , propIsoColor("isoColor", "Color", vec4(0.0f, 0.0f, 1.0f, 1.0f), vec4(0.0f), vec4(1.0f),
                    vec4(0.1f), InvalidationLevel::InvalidOutput, PropertySemantics::Color)
     , propNumContours("numContours", "Number of Contours", 1, 1, 50, 1)
-    , propIsoTransferFunc("isoTransferFunc", "Colors", &inData) {
+    , propIsoTransferFunc("isoTransferFunc", "Colors", &inData)
+    , propGaussianFilter("gaussianFilter", "Apply Gaussian Filter") {
     // Register ports
     addPort(inData);
     addPort(meshIsoOut);
@@ -66,6 +67,9 @@ MarchingSquares::MarchingSquares()
     propMultiple.addOption("multiple", "Multiple", 1);
     addProperty(propNumContours);
     addProperty(propIsoTransferFunc);
+
+    //we add a checkbox for Gaussian filtering
+    addProperty(propGaussianFilter);
 
     // The default transfer function has just two blue points
     propIsoTransferFunc.get().clear();
@@ -98,13 +102,13 @@ MarchingSquares::MarchingSquares()
             util::show(propIsoValue, propIsoColor);
             util::hide(propNumContours, propIsoTransferFunc);
         } else {
-            util::hide(propIsoValue);
-            util::show(propIsoColor, propNumContours);
+            //util::hide(propIsoValue);
+            //util::show(propIsoColor, propNumContours);
 
             // TODO (Bonus): Comment out above if you are using the transfer function
             // and comment in below instead
-            // util::hide(propIsoValue, propIsoColor);
-            // util::show(propNumContours, propIsoTransferFunc);
+            util::hide(propIsoValue, propIsoColor);
+            util::show(propNumContours, propIsoTransferFunc);
         }
     });
 }
@@ -216,7 +220,7 @@ void MarchingSquares::process() {
     // Set the created grid mesh as output
     gridmesh->addVertices(gridvertices);
     meshGridOut.setData(gridmesh);
-
+    
     // TODO (Bonus) Gaussian filter
     // Our input is const (i.e. cannot be altered), but you need to compute smoothed data and write
     // it somewhere
@@ -226,23 +230,29 @@ void MarchingSquares::process() {
     // and read again in the same way as before
     // smoothedField.getValueAtVertex(ij);
 
+    ScalarField2 smoothedGrid = gaussianFilter(grid, nVertPerDim, bBoxMin, bBoxMax);
+
     // Initialize the output: mesh and vertices
     auto mesh = std::make_shared<BasicMesh>();
     std::vector<BasicMesh::Vertex> vertices;
 
-    // get the data values for the regular grid
+    // get the data values for the regular grid (either original or smoothed)
     std::vector<std::vector<double> > data(nVertPerDim[0], std::vector<double>(nVertPerDim[1]));
     for (int i = 0; i < nVertPerDim[0]; i++) {
         for (int j = 0; j < nVertPerDim[1]; j++) {
-            data[i][j] = grid.getValueAtVertex({i, j});
+            if(propGaussianFilter.get()) { //use the smoothed values
+                data[i][j] = smoothedGrid.getValueAtVertex({i, j});
+            }
+            else { //use the original values
+                data[i][j] = grid.getValueAtVertex({i, j});
+            }
         }           
     }
-
-    auto indexBufferIso = mesh->addIndexBuffer(DrawType::Lines, ConnectivityType::None);
 
     if (propMultiple.get() == 0) {
         // TODO: Draw a single isoline at the specified isovalue (propIsoValue)
         // and color it with the specified color (propIsoColor)
+        auto indexBufferIso = mesh->addIndexBuffer(DrawType::Lines, ConnectivityType::None);
         algo(propIsoValue, data, bBoxMin, cellSize, propIsoColor, indexBufferIso.get(), vertices);
 
     }
@@ -250,14 +260,30 @@ void MarchingSquares::process() {
     else {
         // TODO: Draw the given number (propNumContours) of isolines between
         // the minimum and maximum value
+        std::cout << "minValue: " << minValue << " and maxValue: " << maxValue << std::endl;
+        std::cout << "numContours: " << propNumContours << std::endl;
+    
+        for (int i=0 ; i<propNumContours; i++) {
+            auto indexBufferIso = mesh->addIndexBuffer(DrawType::Lines, ConnectivityType::None);
+            double isovalue = minValue + ((i+1) / (double(propNumContours)+1))*(maxValue - minValue);
+            
+            //if only one color, uncomment the line below
+            //algo(isovalue, data, bBoxMin, cellSize, propIsoColor, indexBufferIso.get(), vertices);
 
-        // TODO (Bonus): Use the transfer function property to assign a color
-        // The transfer function normalizes the input data and sampling colors
-        // from the transfer function assumes normalized input, that means
-        // vec4 color = propIsoTransferFunc.get().sample(0.0f);
-        // is the color for the minimum value in the data
-        // vec4 color = propIsoTransferFunc.get().sample(1.0f);
-        // is the color for the maximum value in the data
+            // TODO (Bonus): Use the transfer function property to assign a color
+            // The transfer function normalizes the input data and sampling colors
+            // from the transfer function assumes normalized input, that means
+            // vec4 color = propIsoTransferFunc.get().sample(0.0f);
+            // is the color for the minimum value in the data
+            // vec4 color = propIsoTransferFunc.get().sample(1.0f);
+            // is the color for the maximum value in the data
+            vec4 color = propIsoTransferFunc.get().sample((i+1) / (double(propNumContours)+1));
+            algo(isovalue, data, bBoxMin, cellSize, color, indexBufferIso.get(), vertices);
+        }
+    
+
+
+        
     }
 
     // Note: It is possible to add multiple index buffers to the same mesh,
@@ -321,31 +347,62 @@ void MarchingSquares::algo(const double isovalue, std::vector<std::vector<double
 
 
             //draw the isolines
-            /*
-            for (int i = 0; i < intersections.size(); i++) {
-                //std::cout << intersections[i] << std::endl;
-                for (int j = i+1; j < intersections.size(); j++) {
-                    drawLineSegment(intersections[i], intersections[j], vec4(1, 0, 0, 1), indexBuffer, vertices);
-                }
-            }*/
             if (intersections.size() == 2) {
                 drawLineSegment(intersections[0], intersections[1], color, indexBuffer, vertices);
             }
             else if (intersections.size() == 4) {
                 //asymptotic decider
                 //we check which intersection vertex on the horizontal edges is closest to the left vertical edge (where intersections[0] is)
-                if (intersections[1][0] < intersections[3][0]) { //intersections[1] is closest 
-                    drawLineSegment(intersections[0], intersections[1], color, indexBuffer, vertices);
-                    drawLineSegment(intersections[2], intersections[3], color, indexBuffer, vertices);
-                } 
-                else { //intersections[3] is closest
-                    drawLineSegment(intersections[0], intersections[3], color, indexBuffer, vertices);
-                    drawLineSegment(intersections[2], intersections[1], color, indexBuffer, vertices);
+                if(propDeciderType == 1) {//if random option choosed
+                    if(randomValue(0, 1) < 0.5) {// this segments \\ cells
+                        drawLineSegment(intersections[0], intersections[1], color, indexBuffer, vertices);
+                        drawLineSegment(intersections[2], intersections[3], color, indexBuffer, vertices);
+                    }
+                    else { // this segments // cells
+                        drawLineSegment(intersections[0], intersections[3], color, indexBuffer, vertices);
+                        drawLineSegment(intersections[2], intersections[1], color, indexBuffer, vertices);
+                    }
                 }
-
+            
+                else {
+                    if (intersections[1][0] < intersections[3][0]) { //intersections[1] is closest 
+                        drawLineSegment(intersections[0], intersections[1], color, indexBuffer, vertices);
+                        drawLineSegment(intersections[2], intersections[3], color, indexBuffer, vertices);
+                    }
+                    else { //intersections[3] is closest
+                        drawLineSegment(intersections[0], intersections[3], color, indexBuffer, vertices);
+                        drawLineSegment(intersections[2], intersections[1], color, indexBuffer, vertices);
+                    }
+                }
             }
         }
     }
+}
+
+ScalarField2 MarchingSquares::gaussianFilter(const ScalarField2 field, ivec2 nVertPerDim, dvec2 bBoxMin, dvec2 bBoxMax) {
+    //gaussian kernel
+    double gaussian_kernel[5][5] = {{2, 4, 5, 4, 2},
+                                    {4, 9, 12, 9, 4},
+                                    {5, 12, 15, 12, 5},
+                                    {4, 9, 12, 9, 4},
+                                    {2, 4, 5, 4, 2}};
+    ScalarField2 smoothedField = ScalarField2(nVertPerDim, bBoxMin, bBoxMax - bBoxMin);
+    for(int i = 0; i<nVertPerDim[0]; i++) {
+        for(int j = 0; j<nVertPerDim[1]; j++) {
+            double smoothedValue = 0;
+            //compute the smooth value using the weights from the gaussian kernel
+            //we are padding with 0
+            for (int i_kernel = 0; i_kernel < 5; i_kernel++) {
+                for (int j_kernel = 0; j_kernel < 5; j_kernel++) {
+                    if ((i-2+i_kernel >= 0) && (i-2+i_kernel < nVertPerDim[0]) && (j-2+j_kernel >= 0) && (j-2+j_kernel < nVertPerDim[1])) { //we only compute the weighted value inside the grid (we pad with zero outside the grid)
+                        smoothedValue += gaussian_kernel[i_kernel][j_kernel]*field.getValueAtVertex({i-2+i_kernel, j-2+j_kernel}) / 115.0;
+                    }   
+                }   
+            }
+            smoothedField.setValueAtVertex({i, j}, smoothedValue);
+        }
+    }
+    return smoothedField;
 }
 
 }  // namespace inviwo
