@@ -40,10 +40,20 @@ StreamlineIntegrator::StreamlineIntegrator()
     , mouseMoveStart(
           "mouseMoveStart", "Move Start", [this](Event* e) { eventMoveStart(e); },
           MouseButton::Left, MouseState::Press | MouseState::Move)
+
 // TODO: Initialize additional properties
 // propertyName("propertyIdentifier", "Display Name of the Propery",
 // default value (optional), minimum value (optional), maximum value (optional),
 // increment (optional)); propertyIdentifier cannot have spaces
+    , maxNumberIntegrationSteps("maxNumberIntegrationSteps", "Max Integration Steps", 0)
+    , propIntegrationMethod("integrationMethod", "Integration Method")
+    , stepSize("stepSize", "Step Size", 1.0f)
+    , propIntegrationDirection("integrationDirection", "Integration Direction")
+    , propIntegrateInDirectionField("integrateInDirectionField", "Integrate in the direction field")
+    , maxArcLenght("maxArcLenght", "Max Arc Lenght", 0)
+    , stopAtBoundary("stopAtBoundary", "Stop At Boundary")
+    , minVelocity("minVelocity", "Min Velocity")
+
 {
     // Register Ports
     addPort(inData);
@@ -63,6 +73,17 @@ StreamlineIntegrator::StreamlineIntegrator()
 
     // TODO: Register additional properties
     // addProperty(propertyName);
+    addProperty(maxNumberIntegrationSteps);
+    addProperty(stepSize);
+
+    addProperty(propIntegrationDirection);
+    propIntegrationDirection.addOption("forward", "Forward", 0);
+    propIntegrationDirection.addOption("backward", "Backward", 1);
+
+    addProperty(propIntegrateInDirectionField);
+    addProperty(maxArcLenght);
+    addProperty(stopAtBoundary);
+    addProperty(minVelocity);
 
     // Show properties for a single seed and hide properties for multiple seeds
     // (TODO)
@@ -135,6 +156,7 @@ void StreamlineIntegrator::process() {
             Integrator::drawPoint(startPoint, vec4(0, 0, 0, 1), indexBufferPoints.get(), vertices);
 
         // TODO: Create one stream line from the given start point
+        
 
         // TODO: Use the propNumStepsTaken property to show how many steps have actually been
         // integrated This could be different from the desired number of steps due to stopping
