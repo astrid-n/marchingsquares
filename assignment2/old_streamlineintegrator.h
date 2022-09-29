@@ -100,12 +100,6 @@ public:
     // IntVec2Property propertyName3;
     // TemplateOptionProperty<int> propertyName4;
     // BoolProperty propertyName5;
-    TemplateOptionProperty<int> propIntegrationDirection;
-    BoolProperty propIntegrateInDirectionField;
-    IntProperty maxNumberIntegrationSteps;
-    FloatProperty stepSize;
-    FloatProperty minVelocity;
-    DoubleProperty maxArcLength;
 
 // Attributes
 private:

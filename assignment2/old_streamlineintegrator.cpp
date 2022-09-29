@@ -40,18 +40,10 @@ StreamlineIntegrator::StreamlineIntegrator()
     , mouseMoveStart(
           "mouseMoveStart", "Move Start", [this](Event* e) { eventMoveStart(e); },
           MouseButton::Left, MouseState::Press | MouseState::Move)
-
 // TODO: Initialize additional properties
 // propertyName("propertyIdentifier", "Display Name of the Propery",
 // default value (optional), minimum value (optional), maximum value (optional),
 // increment (optional)); propertyIdentifier cannot have spaces
-    , maxNumberIntegrationSteps("maxNumberIntegrationSteps", "Max Integration Steps", 10, 0, 100)
-    , stepSize("stepSize", "Step Size", 0.1f, 0.0f)
-    , propIntegrationDirection("integrationDirection", "Integration Direction")
-    , propIntegrateInDirectionField("integrateInDirectionField", "Integrate in the direction field")
-    , maxArcLength("maxArcLenght", "Max Arc Lenght", 10, 0, 50)
-    , minVelocity("minVelocity", "Min Velocity", 0, 0, 2)
-
 {
     // Register Ports
     addPort(inData);
@@ -71,16 +63,6 @@ StreamlineIntegrator::StreamlineIntegrator()
 
     // TODO: Register additional properties
     // addProperty(propertyName);
-    addProperty(maxNumberIntegrationSteps);
-    addProperty(stepSize);
-
-    addProperty(propIntegrationDirection);
-    propIntegrationDirection.addOption("forward", "Forward", 0);
-    propIntegrationDirection.addOption("backward", "Backward", 1);
-
-    addProperty(propIntegrateInDirectionField);
-    addProperty(maxArcLength);
-    addProperty(minVelocity);
 
     // Show properties for a single seed and hide properties for multiple seeds
     // (TODO)
@@ -145,51 +127,19 @@ void StreamlineIntegrator::process() {
     auto mesh = std::make_shared<BasicMesh>();
     std::vector<BasicMesh::Vertex> vertices;
 
-    //initialize properties for integration and stop conditions
-    int integrationDirection = 1; //1 if we integrate forward, -1 if we integrate backwards
-    if (propIntegrationDirection.get() == 1) { //then we integrate backwards instead of forward
-        integrationDirection = -1;
-    }  
-
     if (propSeedMode.get() == 0) {
         auto indexBufferPoints = mesh->addIndexBuffer(DrawType::Points, ConnectivityType::None);
         vec2 startPoint = propStartPoint.get();
-
+        // Draw start point
+        if (propDisplayPoints.get() != 0)
+            Integrator::drawPoint(startPoint, vec4(0, 0, 0, 1), indexBufferPoints.get(), vertices);
 
         // TODO: Create one stream line from the given start point
-        auto indexBufferRK = mesh->addIndexBuffer(DrawType::Lines, ConnectivityType::Strip);
-        //RK4 integration
-        Integrator::drawNextPointInPolyline(startPoint, black, indexBufferRK.get(), vertices);
-        dvec2 currentPoint = startPoint;
-        double arcLength = 0;
-        int numberStepsTaken = 0;
-        for (int i = 0; i < maxNumberIntegrationSteps; i++) {
-            dvec2 nextPoint = Integrator::RK4(vectorField, currentPoint, integrationDirection * stepSize, propIntegrateInDirectionField.get());
-            double velocity = glm::length(currentPoint - nextPoint);
-            arcLength += velocity;
-            //std::cout << "i=" << i << std::endl;
-            //std::cout << "arcLength = " << arcLength << " VS maxArcLength = " << maxArcLength << std::endl;
-            //std::cout << "velocity = " << velocity << " VS minVelocity = " << minVelocity << std::endl;
-            if ((nextPoint[0] <= BBoxMax_[0]) && (nextPoint[0] >= BBoxMin_[0])&&((nextPoint[1] <= BBoxMax_[1]))&&(nextPoint[1] >= BBoxMin_[1])&&
-            (arcLength < maxArcLength.get())&&(velocity != 0)&&(velocity >= minVelocity)) {
-                currentPoint = nextPoint;
-                numberStepsTaken += 1;
-                Integrator::drawNextPointInPolyline(nextPoint, black, indexBufferRK.get(), vertices);
-                Integrator::drawPoint(nextPoint, black, indexBufferPoints.get(), vertices);
-            }
-            else {
-                break;
-            }
-        }
 
         // TODO: Use the propNumStepsTaken property to show how many steps have actually been
         // integrated This could be different from the desired number of steps due to stopping
         // conditions (too slow, boundary, ...)
-        propNumStepsTaken.set(numberStepsTaken);
-
-        // Draw start point
-        if (propDisplayPoints.get() != 0)
-            Integrator::drawPoint(startPoint, vec4(1, 0, 0, 1), indexBufferPoints.get(), vertices);
+        propNumStepsTaken.set(0);
 
     } else {
         // TODO: Seed multiple stream lines either randomly or using a uniform grid

@@ -36,14 +36,13 @@ EulerRK4Comparison::EulerRK4Comparison()
     , mouseMoveStart(
           "mouseMoveStart", "Move Start", [this](Event* e) { eventMoveStart(e); },
           MouseButton::Left, MouseState::Press | MouseState::Move)
-    , maxNumberIntegrationSteps("maxNumberIntegrationSteps", "Max Integration Steps", 0)
+    , maxNumberIntegrationStepsEuler("maxNumberIntegrationStepsEuler", "Max Integration Steps for Euler", 10)
+    , maxNumberIntegrationStepsRK4("maxNumberIntegrationStepsRK4", "Max Integration Steps for RK4", 10)
     , propIntegrationMethod("integrationMethod", "Integration Method")
-    , stepSize("stepSize", "Step Size", 1.0f)
+    , stepSizeEuler("stepSizeEuler", "Step Size for Euler", 1.0f)
+    , stepSizeRK4("stepSizeRK4", "Step Size for RK4", 1.0f)
     , propIntegrationDirection("integrationDirection", "Integration Direction")
-    , propIntegrateInDirectionField("integrateInDirectionField", "Integrate in the direction field")
-    , maxArcLenght("maxArcLenght", "Max Arc Lenght", 0)
-    , stopAtBoundary("stopAtBoundary", "Stop At Boundary")
-    , minVelocity("minVelocity", "Min Velocity")
+    , maxArcLength("maxArcLength", "Max Arc Length", 0)
 // TODO: Initialize additional properties
 // propertyName("propertyIdentifier", "Display Name of the Propery",
 // default value (optional), minimum value (optional), maximum value (optional), increment
@@ -63,17 +62,16 @@ EulerRK4Comparison::EulerRK4Comparison()
     propIntegrationMethod.addOption("RK4", "Runge Kutta 4", 1);
     propIntegrationMethod.addOption("both", "Both", 2);
 
-    addProperty(maxNumberIntegrationSteps);
-    addProperty(stepSize);
+    addProperty(maxNumberIntegrationStepsEuler);
+    addProperty(maxNumberIntegrationStepsRK4);
+    addProperty(stepSizeEuler);
+    addProperty(stepSizeRK4);
 
     addProperty(propIntegrationDirection);
     propIntegrationDirection.addOption("forward", "Forward", 0);
     propIntegrationDirection.addOption("backward", "Backward", 1);
-
-    addProperty(propIntegrateInDirectionField);
-    addProperty(maxArcLenght);
-    addProperty(stopAtBoundary);
-    addProperty(minVelocity);
+    
+    //addProperty(maxArcLength);
     // TODO: Register additional properties
     // addProperty(propertyName);
 
@@ -138,10 +136,7 @@ void EulerRK4Comparison::process() {
     bboxMesh->addVertices(bboxVertices);
     meshBBoxOut.setData(bboxMesh);
 
-    // Draw start point
     dvec2 startPoint = propStartPoint.get();
-    dvec2 nextPoint;
-    Integrator::drawPoint(startPoint, black, indexBufferPoints.get(), vertices);
 
     // TODO: Implement the Euler and Runge-Kutta of 4th order integration schemes
     // and then integrate forward for a specified number of integration steps and a given stepsize
@@ -156,36 +151,33 @@ void EulerRK4Comparison::process() {
 
     if(propIntegrationMethod==0 or propIntegrationMethod==2) {
         //Euler integration
-        double arcLenght = 0;
-        Integrator::drawNextPointInPolyline(startPoint, black, indexBufferEuler.get(), vertices);
+        //double arcLength = 0;
+        Integrator::drawNextPointInPolyline(startPoint, red, indexBufferEuler.get(), vertices);
         dvec2 currentPoint = startPoint;
-        for (int i = 0; i < maxNumberIntegrationSteps; i++) {
-            nextPoint = Integrator::Euler(vectorField, currentPoint, integrationDirection * stepSize);
-            arcLenght += sqrt(pow((currentPoint[0]-nextPoint[0]),2) + pow((currentPoint[1]-nextPoint[1]),2));
-            if(arcLenght < maxArcLenght.get()) {
-                currentPoint = nextPoint;
-                Integrator::drawNextPointInPolyline(currentPoint, red, indexBufferEuler.get(), vertices);
-                Integrator::drawPoint(currentPoint, red, indexBufferPoints.get(), vertices);
-            }
+        for (int i = 0; i < maxNumberIntegrationStepsEuler; i++) {
+            //arcLength += sqrt(pow((currentPoint[0]-nextPoint[0]),2) + pow((currentPoint[1]-nextPoint[1]),2));
+            //arcLength += (currentPoint - nextPoint).length();
+            //if(arcLength < maxArcLength.get()) {
+            currentPoint = Integrator::Euler(vectorField, currentPoint, integrationDirection * stepSizeEuler);
+            Integrator::drawNextPointInPolyline(currentPoint, red, indexBufferEuler.get(), vertices);
+            Integrator::drawPoint(currentPoint, red, indexBufferPoints.get(), vertices);
             
         }
     }
     
     if(propIntegrationMethod==1 or propIntegrationMethod==2) {
         //RK4 integration
-        double arcLenght = 0;
-        Integrator::drawNextPointInPolyline(startPoint, black, indexBufferRK.get(), vertices);
+        Integrator::drawNextPointInPolyline(startPoint, blue, indexBufferRK.get(), vertices);
         dvec2 currentPoint = startPoint;
-        for (int i = 0; i < maxNumberIntegrationSteps; i++) {
-            nextPoint = Integrator::RK4(vectorField, currentPoint, integrationDirection * stepSize);
-            arcLenght += sqrt(pow((currentPoint[0]-nextPoint[0]),2) + pow((currentPoint[1]-nextPoint[1]),2));
-            if(arcLenght < maxArcLenght.get()) {
-                currentPoint = nextPoint;
-                Integrator::drawNextPointInPolyline(currentPoint, blue, indexBufferRK.get(), vertices);
-                Integrator::drawPoint(currentPoint, blue, indexBufferPoints.get(), vertices);
-            }
+        for (int i = 0; i < maxNumberIntegrationStepsRK4; i++) {
+            currentPoint = Integrator::RK4(vectorField, currentPoint, integrationDirection * stepSizeRK4);
+            Integrator::drawNextPointInPolyline(currentPoint, blue, indexBufferRK.get(), vertices);
+            Integrator::drawPoint(currentPoint, blue, indexBufferPoints.get(), vertices);
         }
     }
+
+    // Draw start point
+    Integrator::drawPoint(startPoint, black, indexBufferPoints.get(), vertices);
 
     mesh->addVertices(vertices);
     meshOut.setData(mesh);

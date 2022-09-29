@@ -85,12 +85,11 @@ public:
     // TODO: Declare additional properties 
     TemplateOptionProperty<int> propIntegrationMethod;
     TemplateOptionProperty<int> propIntegrationDirection;
-    BoolProperty propIntegrateInDirectionField;
-    IntProperty maxNumberIntegrationSteps;
-    FloatProperty stepSize;
-    FloatProperty minVelocity;
-    IntProperty stopAtBoundary;
-    DoubleProperty maxArcLenght;
+    IntProperty maxNumberIntegrationStepsEuler;
+    IntProperty maxNumberIntegrationStepsRK4;
+    FloatProperty stepSizeEuler;
+    FloatProperty stepSizeRK4;
+    DoubleProperty maxArcLength;
 
 // Attributes
 private:
