@@ -21,8 +21,11 @@
 #include <inviwo/core/properties/eventproperty.h>
 #include <inviwo/core/properties/optionproperty.h>
 #include <inviwo/core/properties/ordinalproperty.h>
+#include <inviwo/core/properties/transferfunctionproperty.h>
 #include <labstreamlines/labstreamlinesmoduledefine.h>
 #include <labutils/scalarvectorfield.h>
+
+#include <random>
 
 namespace inviwo {
 
@@ -73,7 +76,8 @@ protected:
 
     // (TODO: You could define some helper functions here,
     // e.g. a function creating a single streamline from one seed point)
-
+    int drawStreamLine(const dvec2 startPoint, const VectorField2 vectorField, IndexBufferRAM* indexBufferPoints, IndexBufferRAM* indexBufferLines, std::vector<BasicMesh::Vertex>& vertices, bool displayPoints);
+    float randomValue(const float min, const float max) const;
 // Ports
 public:
     // Input Vector Field
@@ -106,11 +110,16 @@ public:
     FloatProperty stepSize;
     FloatProperty minVelocity;
     DoubleProperty maxArcLength;
+    TemplateOptionProperty<int> streamlineMode;
+    IntProperty numberOfStreamlines;
+    IntVec2Property numberGridPoints;
 
 // Attributes
 private:
     dvec2 BBoxMin_{0, 0};
     dvec2 BBoxMax_{0, 0};
+    mutable std::mt19937 randGenerator;
+    mutable std::uniform_real_distribution<float> uniformReal;
 };
 
 }  // namespace inviwo
