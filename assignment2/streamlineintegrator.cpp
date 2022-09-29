@@ -192,9 +192,9 @@ void StreamlineIntegrator::process() {
         if (streamlineMode.get() == 0) {
             for (int i = 0; i < numberOfStreamlines; i++) {
                 auto indexBufferRK = mesh->addIndexBuffer(DrawType::Lines, ConnectivityType::Strip);
-                float rand1 = randomValue(BBoxMin_[0], BBoxMax_[0]);
-                float rand2 = randomValue(BBoxMin_[1], BBoxMax_[1]);
-                dvec2 randomStartPoint = vec2(rand1, rand2);
+                float rand_x = randomValue(BBoxMin_[0], BBoxMax_[0]);
+                float rand_y = randomValue(BBoxMin_[1], BBoxMax_[1]);
+                dvec2 randomStartPoint = vec2(rand_x, rand_y);
                 //draw starting point
                 if (propDisplayPoints.get() != 0) 
                     Integrator::drawPoint(randomStartPoint, vec4(1, 0, 0, 1), indexBufferPoints.get(), vertices);
@@ -217,6 +217,23 @@ void StreamlineIntegrator::process() {
         }
         // (TODO: Bonus, sample randomly according to magnitude of the vector field)
         else if ((streamlineMode.get() == 2)) {
+            //associate to each cell of a uniform grid a probability of being chosen that is proportional to the magnitude at the center of the cell
+            int gridResolution = 50; //number of cells in each direction
+            double cellSize = (BBoxMax_[0]-BBoxMin_[0])/gridResolution;
+            std::vector<std::vector<double> > samplingProbability = computeSamplingProbability(gridResolution, vectorField);
+            //use these probabilities to sample the points
+            for (int i = 0; i < numberOfStreamlines; i++) {
+                auto indexBufferRK = mesh->addIndexBuffer(DrawType::Lines, ConnectivityType::Strip);
+                ivec2 randomCellIndex = randomCell(samplingProbability);
+                float rand_x = randomValue(BBoxMin_[0] + randomCellIndex[0]*cellSize, BBoxMin_[0] + (randomCellIndex[0]+1)*cellSize);
+                float rand_y = randomValue(BBoxMin_[1] + randomCellIndex[1]*cellSize, BBoxMin_[1] + (randomCellIndex[1]+1)*cellSize);
+                dvec2 randomStartPoint = vec2(rand_x, rand_y);
+                //draw starting point
+                if (propDisplayPoints.get() != 0) 
+                    Integrator::drawPoint(randomStartPoint, vec4(1, 0, 0, 1), indexBufferPoints.get(), vertices);
+                //draw streamline
+                drawStreamLine(randomStartPoint, vectorField, indexBufferPoints.get(), indexBufferRK.get(), vertices, propDisplayPoints.get() != 0);
+            }
         }
     }
 
@@ -273,6 +290,38 @@ int StreamlineIntegrator::drawStreamLine(const dvec2 startPoint, const VectorFie
 
 float StreamlineIntegrator::randomValue(const float min, const float max) const {
     return min + uniformReal(randGenerator) * (max - min);
+}
+
+std::vector<std::vector<double> > StreamlineIntegrator::computeSamplingProbability(int gridResolution, const VectorField2 vectorField) {
+    //create a uniform grid inside the bounding box and sample the vector field magnitude in the center of each cell
+    std::vector<std::vector<double> > samplingProbability(gridResolution, std::vector<double>(gridResolution));
+    double sumMagnitudes = 0; //compute the sum of all magnitudes and divide every magnitude at the end to get a probability
+    for (int i = 0; i < gridResolution; i++) {
+        for (int j=0; j < gridResolution; j++) { //sample vector field in cell (i,j)
+            dvec2 centerCell = vec2(BBoxMin_[0] + (i+0.5)*(BBoxMax_[0]-BBoxMin_[0])/gridResolution, BBoxMin_[1] + (j+0.5)*(BBoxMax_[1]-BBoxMin_[1])/gridResolution);
+            samplingProbability[i][j] = glm::length(vectorField.interpolate(centerCell));
+            sumMagnitudes += samplingProbability[i][j];
+        }
+    }
+    //divide by the sum of magnitudes to get the probability
+    for (int i = 0; i < gridResolution; i++) {
+        for (int j=0; j < gridResolution; j++) { //sample vector field in cell (i,j)
+        samplingProbability[i][j] /= sumMagnitudes;
+        }
+    }
+    return samplingProbability;
+}
+
+ivec2 StreamlineIntegrator::randomCell(std::vector<std::vector<double> > samplingProbability) {
+    float rand = randomValue(0, 1);
+    double cumulatedProbability = 0;
+    for (int i = 0; i < samplingProbability.size(); i++) {
+        for (int j = 0; j < samplingProbability[0].size(); j++) {
+            cumulatedProbability += samplingProbability[i][j];
+            if (rand <= cumulatedProbability) 
+                return vec2(i, j);
+        }
+    }
 }
 
 }  // namespace inviwo

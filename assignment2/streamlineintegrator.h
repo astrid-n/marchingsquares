@@ -78,6 +78,8 @@ protected:
     // e.g. a function creating a single streamline from one seed point)
     int drawStreamLine(const dvec2 startPoint, const VectorField2 vectorField, IndexBufferRAM* indexBufferPoints, IndexBufferRAM* indexBufferLines, std::vector<BasicMesh::Vertex>& vertices, bool displayPoints);
     float randomValue(const float min, const float max) const;
+    std::vector<std::vector<double> > computeSamplingProbability(int gridResolution, const VectorField2 vectorField);
+    ivec2 randomCell(std::vector<std::vector<double> > samplingProbability);
 // Ports
 public:
     // Input Vector Field

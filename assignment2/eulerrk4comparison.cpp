@@ -42,7 +42,6 @@ EulerRK4Comparison::EulerRK4Comparison()
     , stepSizeEuler("stepSizeEuler", "Step Size for Euler", 1.0f)
     , stepSizeRK4("stepSizeRK4", "Step Size for RK4", 1.0f)
     , propIntegrationDirection("integrationDirection", "Integration Direction")
-    , maxArcLength("maxArcLength", "Max Arc Length", 0)
 // TODO: Initialize additional properties
 // propertyName("propertyIdentifier", "Display Name of the Propery",
 // default value (optional), minimum value (optional), maximum value (optional), increment
@@ -71,7 +70,6 @@ EulerRK4Comparison::EulerRK4Comparison()
     propIntegrationDirection.addOption("forward", "Forward", 0);
     propIntegrationDirection.addOption("backward", "Backward", 1);
     
-    //addProperty(maxArcLength);
     // TODO: Register additional properties
     // addProperty(propertyName);
 
@@ -151,13 +149,9 @@ void EulerRK4Comparison::process() {
 
     if(propIntegrationMethod==0 or propIntegrationMethod==2) {
         //Euler integration
-        //double arcLength = 0;
         Integrator::drawNextPointInPolyline(startPoint, red, indexBufferEuler.get(), vertices);
         dvec2 currentPoint = startPoint;
         for (int i = 0; i < maxNumberIntegrationStepsEuler; i++) {
-            //arcLength += sqrt(pow((currentPoint[0]-nextPoint[0]),2) + pow((currentPoint[1]-nextPoint[1]),2));
-            //arcLength += (currentPoint - nextPoint).length();
-            //if(arcLength < maxArcLength.get()) {
             currentPoint = Integrator::Euler(vectorField, currentPoint, integrationDirection * stepSizeEuler);
             Integrator::drawNextPointInPolyline(currentPoint, red, indexBufferEuler.get(), vertices);
             Integrator::drawPoint(currentPoint, red, indexBufferPoints.get(), vertices);

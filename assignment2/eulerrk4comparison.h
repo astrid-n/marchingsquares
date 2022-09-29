@@ -89,7 +89,6 @@ public:
     IntProperty maxNumberIntegrationStepsRK4;
     FloatProperty stepSizeEuler;
     FloatProperty stepSizeRK4;
-    DoubleProperty maxArcLength;
 
 // Attributes
 private:
