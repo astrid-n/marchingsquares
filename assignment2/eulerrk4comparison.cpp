@@ -152,7 +152,8 @@ void EulerRK4Comparison::process() {
         Integrator::drawNextPointInPolyline(startPoint, red, indexBufferEuler.get(), vertices);
         dvec2 currentPoint = startPoint;
         for (int i = 0; i < maxNumberIntegrationStepsEuler; i++) {
-            currentPoint = Integrator::Euler(vectorField, currentPoint, integrationDirection * stepSizeEuler);
+            double step = integrationDirection * stepSizeEuler;
+            currentPoint = currentPoint + step * Integrator::Euler(vectorField, currentPoint);
             Integrator::drawNextPointInPolyline(currentPoint, red, indexBufferEuler.get(), vertices);
             Integrator::drawPoint(currentPoint, red, indexBufferPoints.get(), vertices);
             
@@ -164,7 +165,8 @@ void EulerRK4Comparison::process() {
         Integrator::drawNextPointInPolyline(startPoint, blue, indexBufferRK.get(), vertices);
         dvec2 currentPoint = startPoint;
         for (int i = 0; i < maxNumberIntegrationStepsRK4; i++) {
-            currentPoint = Integrator::RK4(vectorField, currentPoint, integrationDirection * stepSizeRK4);
+            double step = (double) integrationDirection * stepSizeRK4;
+            currentPoint = currentPoint + step * Integrator::RK4(vectorField, currentPoint, step);
             Integrator::drawNextPointInPolyline(currentPoint, blue, indexBufferRK.get(), vertices);
             Integrator::drawPoint(currentPoint, blue, indexBufferPoints.get(), vertices);
         }

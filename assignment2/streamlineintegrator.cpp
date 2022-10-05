@@ -265,9 +265,15 @@ int StreamlineIntegrator::drawStreamLine(const dvec2 startPoint, const VectorFie
     double arcLength = 0;
     int numberStepsTaken = 0;
     for (int i = 0; i < maxNumberIntegrationSteps; i++) {
-        dvec2 nextPoint = Integrator::RK4(vectorField, currentPoint, integrationDirection * stepSize, propIntegrateInDirectionField.get());
-        double velocity = glm::length(currentPoint - nextPoint);
-        arcLength += velocity;
+        double step = (double) integrationDirection * stepSize;
+        dvec2 velocityVector = Integrator::RK4(vectorField, currentPoint, step);
+        dvec2 normalizedVelocity = velocityVector;
+        if (propIntegrateInDirectionField.get()) {
+            normalizedVelocity = glm::normalize(velocityVector);
+        }
+        dvec2 nextPoint = currentPoint + step * normalizedVelocity;
+        double velocity = glm::length(velocityVector);
+        arcLength += step * glm::length(normalizedVelocity);
         //std::cout << "i=" << i << std::endl;
         //std::cout << "arcLength = " << arcLength << " VS maxArcLength = " << maxArcLength << std::endl;
         //std::cout << "velocity = " << velocity << " VS minVelocity = " << minVelocity << std::endl;
