@@ -52,6 +52,7 @@ public:
     // Examples would be the stepsize, inegreation direction, ...
     static dvec2 RK4(const VectorField2& vectorField, const dvec2& position, const double step);
     static dvec2 Euler(const VectorField2& vectorField, const dvec2& position);
+    static std::vector<dvec2> computeEquidistantStreamline(const dvec2& startPoint, const VectorField2& vectorField, const double stepSize, const int kernelSize);
 };
 
 }  // namespace inviwo
