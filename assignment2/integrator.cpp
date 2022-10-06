@@ -101,4 +101,52 @@ std::vector<dvec2> Integrator::computeEquidistantStreamline(const dvec2& startPo
     return streamline;
 }
 
+std::vector<dvec2> Integrator::computeEquidistantMaxStreamline(const dvec2& startPoint, const VectorField2& vectorField, const double stepSize) { //same as below, but get the max length of the streamline
+    std::vector<dvec2> streamline;
+    streamline.push_back(startPoint);
+    //get the bounding box of the vector field
+    dvec2 BBoxMin_ = vectorField.getBBoxMin();
+    dvec2 BBoxMax_ = vectorField.getBBoxMax();
+
+    //compute streamline in forward direction
+    dvec2 currentPoint = vec2(startPoint[0], startPoint[1]);
+    double step = stepSize; //forward direction: step = +stepSize
+
+    bool uncompleteStreamline = true;
+    while (uncompleteStreamline) {
+        dvec2 normalizedVelocity = glm::normalize(RK4(vectorField, currentPoint, step));
+        dvec2 nextPoint = currentPoint + stepSize * normalizedVelocity;
+        //if ((currentPoint[0] >= 0.3 * BBoxMin_[0])&&(currentPoint[0] <= 0.7 * BBoxMin_[0])&&(currentPoint[1] >= 0.3 * BBoxMin_[1])&&(currentPoint[0] <= 0.7 * BBoxMin_[0]))
+        std::cout << "current = " << currentPoint << " vs next = " << nextPoint << " (bbox = " << BBoxMin_ << ", " << BBoxMax_ << ")" << std::endl;
+
+        //std::cout << "forward" << std::endl;
+        uncompleteStreamline = (nextPoint[0] <= BBoxMax_[0]) && (nextPoint[0] >= BBoxMin_[0])&&((nextPoint[1] <= BBoxMax_[1]))&&
+        (nextPoint[1] >= BBoxMin_[1])&&(glm::length(normalizedVelocity) != 0);
+        if (uncompleteStreamline) {
+            currentPoint = nextPoint;
+            streamline.push_back(currentPoint);
+        }
+    }
+
+
+    //compute streamline in backward direction
+    uncompleteStreamline = true;
+    while (uncompleteStreamline) {
+        //std::cout << "backward" << std::endl;
+        currentPoint = vec2(startPoint[0], startPoint[1]);
+        step = - stepSize; //backward direction: step = -stepSize
+        dvec2 normalizedVelocity = glm::normalize(RK4(vectorField, currentPoint, step));
+        dvec2 nextPoint = currentPoint + stepSize * normalizedVelocity;
+        uncompleteStreamline = (nextPoint[0] <= BBoxMax_[0]) && (nextPoint[0] >= BBoxMin_[0])&&((nextPoint[1] <= BBoxMax_[1]))&&
+        (nextPoint[1] >= BBoxMin_[1])&&(glm::length(normalizedVelocity) != 0);
+        if (uncompleteStreamline) {
+            currentPoint = nextPoint;
+            streamline.push_back(currentPoint);
+        }
+    }
+
+    return streamline;
+
+}
+
 }  // namespace inviwo

@@ -117,11 +117,12 @@ void LICProcessor::process() {
             dvec2 textureCoords_ij = vec2(i + 0.5 / (double)texDims_.x, j + 0.5 / (double)texDims_.y); //coordinates at the center of the pixel (i,j) in the texture
             dvec2 startPoint = textureToVectorFieldCoords(textureCoords_ij); //corresponding coordinates for the vector field
             //std::cout << "(i,j) = (" << i << "," << j << ") and bbox = " << vectorFieldDims_ << " and texDim = " << texDims_ << " and startPoint = " << startPoint << std::endl;
+            std::vector<dvec2> streamline;
             if(propLIC==0) { //if normal LIC
-                std::vector<dvec2> streamline = Integrator::computeEquidistantStreamline(startPoint, vectorField, stepSize, kernelSize.get());
+                streamline = Integrator::computeEquidistantStreamline(startPoint, vectorField, stepSize, kernelSize.get());
             }
             else {
-                std::vector<dvec2> streamline = Integrator::computeEquidistantMaxStreamline(startPoint, vectorField, stepSize);
+                streamline = Integrator::computeEquidistantMaxStreamline(startPoint, vectorField, stepSize);
             }
             //arithmetic mean for the kernel box (add all values together and divide by streamline size)
             //if ((j <= 0.5*texDims_.y) && ((i <= 0.5*texDims_.x))&&(j >= 0.6*texDims_.y) && ((i >= 0.6*texDims_.x))) {
@@ -158,7 +159,7 @@ void LICProcessor::process() {
         //compute mean and standard deviation of non-zero pixels
         double sumPixels = 0;
         double sumPixelsSquared = 0;
-        int numberNonBlackPixels = 0
+        int numberNonBlackPixels = 0;
         for (size_t j = 0; j < texDims_.y; j++) {
             for (size_t i = 0; i < texDims_.x; i++) {
                 double pixel_ij = licImage.readPixelGrayScale(size2_t(i,j)); 
