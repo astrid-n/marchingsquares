@@ -29,14 +29,21 @@ NoiseTextureGenerator::NoiseTextureGenerator()
     , texOut_("texOut")
     , texSize_("texSize", "Texture Size", vec2(512, 512), vec2(1, 1), vec2(2048, 2048), vec2(1, 1))
 // TODO: Register additional properties
+    , propTexture("Texture", "Texture")
+    , randomSeed_("randomSeed", "Random Seed", 1, 1, 100000)
 {
     // Register ports
     addPort(texOut_);
 
     // Register properties
     addProperty(texSize_);
+    addProperty(randomSeed_);
 
     // TODO: Register additional properties
+    addProperty(propTexture);
+    propTexture.addOption("gray", "Gray", 0);
+    propTexture.addOption("blackAndWhite", "Black & White", 1);
+    //propTexture.addOption("color", "Color", 2); //not meaningful
 }
 
 void NoiseTextureGenerator::process() {
@@ -76,12 +83,10 @@ void NoiseTextureGenerator::process() {
 
 
     //Initialize random number generator
-    randGenerator.seed(static_cast<std::mt19937::result_type>(0));
 
+    randGenerator.seed(static_cast<std::mt19937::result_type>(randomSeed_.get()));
     for (int j = 0; j < texSize_.get().y; j++) {
         for (int i = 0; i < texSize_.get().x; i++) {
-
-            val = 256 / 2;
             // TODO: Randomly sample values for the texture, this produces the same gray value for
             // all pixels
             // A value within the ouput image is set by specifying pixel position and color
@@ -90,14 +95,27 @@ void NoiseTextureGenerator::process() {
             int randomRed = (int) randomValue(0, 255);
             int randomGreen = (int) randomValue(0, 255);
             int randomBlue = (int) randomValue(0, 255);
-            noiseTexture.setPixel(size2_t(i, j), vec4(randomRed, randomGreen, randomBlue, 255));
+            if(propTexture == 0) { //if texture is Gray
+                noiseTexture.setPixelGrayScale(size2_t(i, j), randomRed); //randomRed used as the randdom gray value
+            }
+            else if (propTexture == 1) { //if texture is Black and White
+                if(randomRed > 127) {
+                    randomRed = 255;
+                }
+                else {
+                    randomRed = 0;
+                }
+                noiseTexture.setPixelGrayScale(size2_t(i, j), randomRed);
+            }
+            //else { //if texture is Color
+            //    noiseTexture.setPixel(size2_t(i, j), vec4(randomRed, randomGreen, randomBlue, 255));
+            //}
         }
     }
-
     texOut_.setData(outImage);
 }
 
-float StreamlineIntegrator::randomValue(const float min, const float max) const {
+float NoiseTextureGenerator::randomValue(const float min, const float max) const {
     return min + uniformReal(randGenerator) * (max - min);
 }
 

@@ -16,6 +16,7 @@
 #include <inviwo/core/properties/optionproperty.h>
 #include <inviwo/core/properties/ordinalproperty.h>
 #include <lablic/lablicmoduledefine.h>
+#include <random>
 
 namespace inviwo {
 
@@ -57,8 +58,10 @@ public:
     // Properties
 public:
     IntVec2Property texSize_;
-
+    IntProperty randomSeed_;
     // TODO: Declare additional properties
+    TemplateOptionProperty<int> propTexture;
+
     // IntProperty properyName;
     // TemplateOptionProperty<int> propertyName2;
 

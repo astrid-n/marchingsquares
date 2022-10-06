@@ -20,6 +20,7 @@
 #include <lablic/lablicmoduledefine.h>
 #include <labutils/scalarvectorfield.h>
 #include <labutils/rgbaimage.h>
+#include <labstreamlines/integrator.h>
 
 namespace inviwo {
 
@@ -60,6 +61,8 @@ protected:
 
     // (TODO: Helper functions can be defined here and then implemented in the .cpp)
     // e.g. something like a function for standardLIC, fastLIC, autoContrast, ...
+    dvec2 vectorFieldToTextureCoords(dvec2 const position);
+    dvec2 textureToVectorFieldCoords(dvec2 const coords);
 
     // Ports
 public:
@@ -77,11 +80,19 @@ public:
     // TODO: Declare properties
     // IntProperty prop1;
     // BoolProperty prop2;
+    IntProperty kernelSize;
+    BoolProperty contrastEnhancement;
+    DoubleProperty mean;
+    DoubleProperty standardDeviation;
+    TemplateOptionProperty<int> propTexture;
+    TemplateOptionProperty<int> propLIC;
 
     // Attributes
 private:
     size3_t vectorFieldDims_;
     size2_t texDims_;
+    dvec2 BBoxMin_{0, 0};
+    dvec2 BBoxMax_{0, 0};
 };
 
 }  // namespace inviwo
