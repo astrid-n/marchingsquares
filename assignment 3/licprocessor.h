@@ -64,8 +64,8 @@ protected:
     // e.g. something like a function for standardLIC, fastLIC, autoContrast, ...
     dvec2 vectorFieldToTextureCoords(dvec2 const position);
     dvec2 textureToVectorFieldCoords(dvec2 const coords);
-    void LIC(RGBAImage& licImage, const VectorField2& vectorField, const RGBAImage texture);
-    void fastLIC(RGBAImage& licImage, const VectorField2& vectorField, const RGBAImage texture);
+    void LIC(RGBAImage& licImage, const VectorField2& vectorField, const RGBAImage& texture);
+    void fastLIC(RGBAImage& licImage, const VectorField2& vectorField, const RGBAImage& texture);
     void enhanceContrast(RGBAImage& licImage);
 
 

@@ -108,11 +108,12 @@ void LICProcessor::process() {
         LIC(licImage, vectorField, texture);
     } 
     else if(propLIC==1) { //if fast LIC
-        fastLIC(licImage, vectorField, texture);       
+        fastLIC(licImage, vectorField, texture);   
     }
 
 
     if (contrastEnhancement.get() == 1) { //apply contrast enhancement with given mean and standard deviation value
+        std::cout << "COME ON" << std::endl;
         enhanceContrast(licImage);
     }
     
@@ -142,7 +143,7 @@ dvec2 LICProcessor::textureToVectorFieldCoords(dvec2 const coords) {
     return vec2((coords[0] / texDims_.x) * (BBoxMax_[0] - BBoxMin_[0]) + BBoxMin_[0], (coords[1] / texDims_.y) * (BBoxMax_[1] - BBoxMin_[1]) + BBoxMin_[1]);
 }
 
-void LICProcessor::LIC(RGBAImage& licImage, const VectorField2& vectorField, const RGBAImage texture) {
+void LICProcessor::LIC(RGBAImage& licImage, const VectorField2& vectorField, const RGBAImage& texture) {
     double stepSize = std::min((BBoxMax_[0] - BBoxMin_[0]) / (double)texDims_.x, (BBoxMax_[1] - BBoxMin_[1]) / (double)texDims_.y);
     double maxMagnitude = 0.0; 
     for (size_t j = 0; j < texDims_.y; j++) {
@@ -185,10 +186,11 @@ void LICProcessor::LIC(RGBAImage& licImage, const VectorField2& vectorField, con
     }
 }
 
-void LICProcessor::fastLIC(RGBAImage& licImage, const VectorField2& vectorField, const RGBAImage texture) {
+void LICProcessor::fastLIC(RGBAImage& licImage, const VectorField2& vectorField, const RGBAImage& texture) {
     // Hint: Output an image showing which pixels you have visited for debugging
-    std::vector<std::vector<int>> visited(texDims_.x, std::vector<int>(texDims_.y, 0));
+    std::vector<std::vector<int> > visited(texDims_.x, std::vector<int>(texDims_.y, 0));
     double stepSize = std::min((BBoxMax_[0] - BBoxMin_[0]) / (double)texDims_.x, (BBoxMax_[1] - BBoxMin_[1]) / (double)texDims_.y);
+
     for (size_t j = 0; j < texDims_.y; j++) {
         for (size_t i = 0; i < texDims_.x; i++) {
             if (visited[i][j] == 0) { //we only compute the streamline if the point has not been visited yet
@@ -196,6 +198,7 @@ void LICProcessor::fastLIC(RGBAImage& licImage, const VectorField2& vectorField,
                 dvec2 textureCoords_ij = vec2(i + 0.5 / (double)texDims_.x, j + 0.5 / (double)texDims_.y); //coordinates at the center of the pixel (i,j) in the texture
                 dvec2 startPoint = textureToVectorFieldCoords(textureCoords_ij); //corresponding coordinates for the vector field
                 std::deque<dvec2> streamline = Integrator::computeEquidistantMaxStreamline(startPoint, vectorField, stepSize);
+
                 //initialize color for the first pixel
                 double value = 0;
                 for (int k = 0; k < kernelSize.get()/2.0 ; k++) {
@@ -206,12 +209,12 @@ void LICProcessor::fastLIC(RGBAImage& licImage, const VectorField2& vectorField,
                 for (int k = 0; k < streamline.size(); k++) {
                     //remove first pixel in the convolution
                     if (k > kernelSize.get()/2.0) {
-                        dvec2 textureCoords_first = vectorFieldToTextureCoords(streamline[k - kernelSize.get()/2.0 - 1]);
+                        dvec2 textureCoords_first = vectorFieldToTextureCoords(streamline[k - (int)(kernelSize.get()/2.0) - 1]);
                         value -= texture.sampleGrayScale(textureCoords_first);
                     }
                     //add last pixel in the convolution
-                    if( k < kernelSize.get()/2.0) {
-                        dvec2 textureCoords_last = vectorFieldToTextureCoords(streamline[k + kernelSize.get()/2.0]);
+                    if (k < streamline.size() - kernelSize.get()/2.0) {
+                        dvec2 textureCoords_last = vectorFieldToTextureCoords(streamline[k + (int)(kernelSize.get()/2.0)]);
                         value += texture.sampleGrayScale(textureCoords_last);                        
                     }
                     //get the average
@@ -219,15 +222,11 @@ void LICProcessor::fastLIC(RGBAImage& licImage, const VectorField2& vectorField,
                     //get the index (i_k, j_k) of the pixel corresponding to point k
                     int i_k = std::floor(textureCoords_k[0]);
                     int j_k = std::floor(textureCoords_k[1]);
-                    if ((i_k >= 701) || (j_k >= 401)) {
-                        std::cout << "texSize = " << texDims_ << " vs (i_k, j_k) = " << i_k << ", " << j_k << std::endl;
-                        std::cout << "bbox = " << BBoxMin_ << " , " << BBoxMax_ << " vs coords = " << streamline[k] << std::endl;
-                    }
 
                     //update texture and mark pixel as visited
-                    if ((i_k < texDims_.x) && (j_k < texDims_.y)) {
+                    if ((i_k >= 0) && (j_k >= 0) && (i_k < texDims_.x) && (j_k < texDims_.y)) {
                         licImage.setPixelGrayScale(size2_t(i_k, j_k), value / (double)kernelSize.get());
-                        visited[i_k][j_k] = 1;                       
+                        visited[i_k][j_k] = 1;                
                     }
                 }
             }
@@ -253,7 +252,10 @@ void LICProcessor::enhanceContrast(RGBAImage& licImage) {
     double meanNonZero = sumPixels / (double)numberNonBlackPixels;
     double standardDeviationNonZero = std::sqrt((sumPixelsSquared - numberNonBlackPixels * meanNonZero * meanNonZero) / (double)(numberNonBlackPixels - 1));
     //compute desired pixel values
-    double stretchingFactor = std::min(255 * standardDeviation.get() / standardDeviationNonZero, 3.0); //we restrict to the maximum value
+    double stretchingFactor = 0;
+    if (standardDeviationNonZero == 0) stretchingFactor = 3;
+    else
+        stretchingFactor = std::min(255 * standardDeviation.get() / standardDeviationNonZero, 3.0); //we restrict to the maximum value
     for (size_t j = 0; j < texDims_.y; j++) {
         for (size_t i = 0; i < texDims_.x; i++) {
             double pixel_ij = licImage.readPixelGrayScale(size2_t(i,j)); 

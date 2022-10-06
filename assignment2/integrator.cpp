@@ -64,7 +64,7 @@ std::vector<dvec2> Integrator::computeEquidistantStreamline(const dvec2& startPo
     double step = stepSize; //forward direction: step = +stepSize
     for (int i = 0; i < kernelSize / 2.0; i++) {
         dvec2 normalizedVelocity = glm::normalize(RK4(vectorField, currentPoint, step));
-        dvec2 nextPoint = currentPoint + stepSize * normalizedVelocity;
+        dvec2 nextPoint = currentPoint + step * normalizedVelocity;
 
         if ((nextPoint[0] <= BBoxMax_[0]) && (nextPoint[0] >= BBoxMin_[0])&&((nextPoint[1] <= BBoxMax_[1]))&&
             (nextPoint[1] >= BBoxMin_[1])&&(glm::length(normalizedVelocity) != 0)) {
@@ -81,7 +81,7 @@ std::vector<dvec2> Integrator::computeEquidistantStreamline(const dvec2& startPo
     step = - stepSize; //backward direction: step = -stepSize
     for (int i = 0; i < kernelSize / 2.0; i++) {
         dvec2 normalizedVelocity = glm::normalize(RK4(vectorField, currentPoint, step));
-        dvec2 nextPoint = currentPoint + stepSize * normalizedVelocity;
+        dvec2 nextPoint = currentPoint + step * normalizedVelocity;
 
         if ((nextPoint[0] <= BBoxMax_[0]) && (nextPoint[0] >= BBoxMin_[0])&&((nextPoint[1] <= BBoxMax_[1]))&&
             (nextPoint[1] >= BBoxMin_[1])&&(glm::length(normalizedVelocity) != 0)) {
@@ -99,7 +99,6 @@ std::vector<dvec2> Integrator::computeEquidistantStreamline(const dvec2& startPo
 std::deque<dvec2> Integrator::computeEquidistantMaxStreamline(const dvec2& startPoint, const VectorField2& vectorField, const double stepSize) { //same as below, but get the max length of the streamline
     double eps = 0.000000001;
     std::deque<dvec2> streamline;
-    streamline.push_back(startPoint);
     //get the bounding box of the vector field
     dvec2 BBoxMin_ = vectorField.getBBoxMin();
     dvec2 BBoxMax_ = vectorField.getBBoxMax();
@@ -110,7 +109,7 @@ std::deque<dvec2> Integrator::computeEquidistantMaxStreamline(const dvec2& start
     double step = - stepSize; //backward direction: step = -stepSize
     while (uncompleteStreamline) {
         dvec2 normalizedVelocity = glm::normalize(RK4(vectorField, currentPoint, step));
-        dvec2 nextPoint = currentPoint + stepSize * normalizedVelocity;
+        dvec2 nextPoint = currentPoint + step * normalizedVelocity;
         uncompleteStreamline = (nextPoint[0] <= BBoxMax_[0]) && (nextPoint[0] >= BBoxMin_[0] )&& ((nextPoint[1] <= BBoxMax_[1])) && (nextPoint[1] >= BBoxMin_[1]) 
                                 && (glm::length(normalizedVelocity) != 0) && (glm::length(nextPoint - startPoint) >= eps);
         if (uncompleteStreamline) {
@@ -127,7 +126,7 @@ std::deque<dvec2> Integrator::computeEquidistantMaxStreamline(const dvec2& start
     step = stepSize; //forward direction: step = +stepSize
     while (uncompleteStreamline) {
         dvec2 normalizedVelocity = glm::normalize(RK4(vectorField, currentPoint, step));
-        dvec2 nextPoint = currentPoint + stepSize * normalizedVelocity;
+        dvec2 nextPoint = currentPoint + step * normalizedVelocity;
         uncompleteStreamline = (nextPoint[0] <= BBoxMax_[0]) && (nextPoint[0] >= BBoxMin_[0]) && ((nextPoint[1] <= BBoxMax_[1])) && (nextPoint[1] >= BBoxMin_[1]) 
                                 && (glm::length(normalizedVelocity) != 0) && (glm::length(nextPoint - startPoint) >= eps);
         if (uncompleteStreamline) {
