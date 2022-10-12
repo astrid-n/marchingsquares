@@ -13,6 +13,8 @@
 #include <labtopo/topology.h>
 #include <labtopo/utils/gradients.h>
 
+#include <iostream>
+
 namespace inviwo {
 
 const vec4 Topology::ColorsCP[6] = {
@@ -98,7 +100,16 @@ void Topology::process() {
     // Find the critical points and color them according to their type.
     // Integrate all separatrices.
 
+    //change of sign test
+    dvec2 v1 = vectorField.interpolate(vec2(BBoxMin[0], BBoxMin[1])); //down left
+    dvec2 v2 = vectorField.interpolate(vec2(BBoxMax[0], BBoxMin[1])); //down right
+    dvec2 v3 = vectorField.interpolate(vec2(BBoxMax[0], BBoxMax[1])); //up right
+    dvec2 v4 = vectorField.interpolate(vec2(BBoxMin[0], BBoxMax[1])); //up left
+
+
     size2_t dims = vectorField.getNumVerticesPerDim();
+    //std::cout << "vector fild dimensions ";
+    //std::cout << dims << endl;
 
     // Looping through all values in the vector field.
     for (size_t j = 0; j < dims[1]; ++j) {
