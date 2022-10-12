@@ -69,7 +69,11 @@ protected:
     virtual void process() override;
 
     // TODO: You may want to declare additional functions here, e.g., extractCriticalPoints.
-
+    vec2 cellPosition(int i, int j, const VectorField2 vectorField);
+    int sgn(double val);
+    void findZerosAndSignChanges(std::vector<dvec2>& criticalPoints, bool& zeroFound, ivec2& signChanges, const std::vector<dvec2> corners, const VectorField2 vectorField, const double eps);
+    std::vector<dvec2> extractCriticalPoints(const VectorField2 vectorField, const double eps);
+    vec4 classifyCriticalPoints(const vec2 pos, const VectorField2 vectorField);
     static void drawLineSegment(const dvec2& v1, const dvec2& v2, const vec4& color,
                                 IndexBufferRAM* indexBuffer,
                                 std::vector<BasicMesh::Vertex>& vertices);
