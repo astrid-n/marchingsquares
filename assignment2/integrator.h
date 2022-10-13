@@ -54,7 +54,7 @@ public:
     static dvec2 RK4(const VectorField2& vectorField, const dvec2& position, const double step, const bool normalizeVelocity=false, const vec2 vector0=vec2(0));
     static dvec2 Euler(const VectorField2& vectorField, const dvec2& position);
     static std::vector<dvec2> computeEquidistantStreamline(const dvec2& startPoint, const VectorField2& vectorField, const double stepSize, const int kernelSize);
-    static std::deque<dvec2> computeEquidistantMaxStreamline(const dvec2& startPoint, const VectorField2& vectorField, const double stepSize, const double minVelocity=0);
+    static std::deque<dvec2> computeEquidistantMaxStreamline(const dvec2& startPoint, const VectorField2& vectorField, const double stepSize, const double minVelocity=0, const int maxSteps=10000);
 };
 
 }  // namespace inviwo

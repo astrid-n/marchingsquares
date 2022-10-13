@@ -104,7 +104,7 @@ std::vector<dvec2> Integrator::computeEquidistantStreamline(const dvec2& startPo
     return streamline;
 }
 
-std::deque<dvec2> Integrator::computeEquidistantMaxStreamline(const dvec2& startPoint, const VectorField2& vectorField, const double stepSize, const double minVelocity) { //same as below, but get the max length of the streamline
+std::deque<dvec2> Integrator::computeEquidistantMaxStreamline(const dvec2& startPoint, const VectorField2& vectorField, const double stepSize, const double minVelocity, const int maxSteps) { //same as below, but get the max length of the streamline
     double eps = 0.000000001;
     std::deque<dvec2> streamline;
     //get the bounding box of the vector field
@@ -115,33 +115,37 @@ std::deque<dvec2> Integrator::computeEquidistantMaxStreamline(const dvec2& start
     //compute streamline in backward direction
     bool uncompleteStreamline = true;
     double step = - stepSize; //backward direction: step = -stepSize
+    int numberStepsTaken = 0;
     while (uncompleteStreamline) {
         dvec2 velocity = RK4(vectorField, currentPoint, step);
         dvec2 normalizedVelocity = glm::normalize(velocity);
         dvec2 nextPoint = currentPoint + step * normalizedVelocity;
         uncompleteStreamline = (nextPoint[0] <= BBoxMax_[0]) && (nextPoint[0] >= BBoxMin_[0] )&& ((nextPoint[1] <= BBoxMax_[1])) && (nextPoint[1] >= BBoxMin_[1]) 
-                                && (glm::length(normalizedVelocity) != 0) && (glm::length(nextPoint - startPoint) >= eps) && (glm::length(velocity) >= minVelocity);
+                                && (glm::length(normalizedVelocity) != 0) && (glm::length(nextPoint - startPoint) >= eps) && (glm::length(velocity) >= minVelocity) && (numberStepsTaken <= maxSteps);
         if (uncompleteStreamline) {
             currentPoint = nextPoint; 
             streamline.push_front(currentPoint);
         }
+        numberStepsTaken++;
     }
-
+    std::cout << "backward done" << std::endl;
     streamline.push_back(startPoint);
 
     //compute streamline in forward direction
     uncompleteStreamline = true;
     currentPoint = vec2(startPoint[0], startPoint[1]);
     step = stepSize; //forward direction: step = +stepSize
+    numberStepsTaken = 0;
     while (uncompleteStreamline) {
         dvec2 normalizedVelocity = glm::normalize(RK4(vectorField, currentPoint, step));
         dvec2 nextPoint = currentPoint + step * normalizedVelocity;
         uncompleteStreamline = (nextPoint[0] <= BBoxMax_[0]) && (nextPoint[0] >= BBoxMin_[0]) && ((nextPoint[1] <= BBoxMax_[1])) && (nextPoint[1] >= BBoxMin_[1]) 
-                                && (glm::length(normalizedVelocity) != 0) && (glm::length(nextPoint - startPoint) >= eps);
+                                && (glm::length(normalizedVelocity) != 0) && (glm::length(nextPoint - startPoint) >= eps) && (numberStepsTaken <= maxSteps);
         if (uncompleteStreamline) {
             currentPoint = nextPoint;
             streamline.push_back(currentPoint);
         }
+        numberStepsTaken++;
     }
 
 

@@ -111,7 +111,6 @@ void Topology::process() {
     dvec4 test_color = vec4(1, 0, 0, 1);
     //draw critical points and compute separatrices for saddle points
     for (int i = 0; i < criticalPoints.size(); i++) {
-    //for (int i = 0; i < 2; i++) {
         std::cout << "critical point " << i << std::endl;
         dvec4 color = classifyCriticalPoints(criticalPoints[i], vectorField, separatrices);
         Integrator::drawPoint(criticalPoints[i], color, indexBufferPoints.get(), vertices);
