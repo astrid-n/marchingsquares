@@ -19,9 +19,13 @@ dvec2 Integrator::Euler(const VectorField2& vectorField, const dvec2& position) 
     return velocity;        
 }
 
-dvec2 Integrator::RK4(const VectorField2& vectorField, const dvec2& position, const double step, const bool normalizeVelocity) {
+dvec2 Integrator::RK4(const VectorField2& vectorField, const dvec2& position, const double step, const bool normalizeVelocity, const vec2 vector0) {
     //we compute v1, v2, v3 and v4 for 4th order Runge-Kutta
-    dvec2 v1 = vectorField.interpolate(position);
+    dvec2 v1;
+    if ((vector0[0] == 0)&&(vector0[1] == 0)) //if vector0 != (0,0), we use it instead of the vector field at the first position
+        v1 = vectorField.interpolate(position);
+    else
+        v1 = vec2(vector0[0], vector0[1]);
     if (normalizeVelocity) v1 = glm::normalize(v1);
     dvec2 v2 = vectorField.interpolate(position + step / 2.0 * v1);
     if (normalizeVelocity) v2 = glm::normalize(v2);
