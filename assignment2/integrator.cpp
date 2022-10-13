@@ -19,12 +19,16 @@ dvec2 Integrator::Euler(const VectorField2& vectorField, const dvec2& position) 
     return velocity;        
 }
 
-dvec2 Integrator::RK4(const VectorField2& vectorField, const dvec2& position, const double step) {
+dvec2 Integrator::RK4(const VectorField2& vectorField, const dvec2& position, const double step, const bool normalizeVelocity) {
     //we compute v1, v2, v3 and v4 for 4th order Runge-Kutta
     dvec2 v1 = vectorField.interpolate(position);
+    if (normalizeVelocity) v1 = glm::normalize(v1);
     dvec2 v2 = vectorField.interpolate(position + step / 2.0 * v1);
+    if (normalizeVelocity) v2 = glm::normalize(v2);
     dvec2 v3 = vectorField.interpolate(position + step/2.0 * v2);
+    if (normalizeVelocity) v3 = glm::normalize(v3);
     dvec2 v4 = vectorField.interpolate(position + step * v3);
+    if (normalizeVelocity) v4 = glm::normalize(v4);
     //compute velocity
     return v1 / 6.0 + v2 / 3.0 + v3 / 3.0 + v4 / 6.0;
 }
@@ -96,7 +100,7 @@ std::vector<dvec2> Integrator::computeEquidistantStreamline(const dvec2& startPo
     return streamline;
 }
 
-std::deque<dvec2> Integrator::computeEquidistantMaxStreamline(const dvec2& startPoint, const VectorField2& vectorField, const double stepSize) { //same as below, but get the max length of the streamline
+std::deque<dvec2> Integrator::computeEquidistantMaxStreamline(const dvec2& startPoint, const VectorField2& vectorField, const double stepSize, const double minVelocity) { //same as below, but get the max length of the streamline
     double eps = 0.000000001;
     std::deque<dvec2> streamline;
     //get the bounding box of the vector field
@@ -108,10 +112,11 @@ std::deque<dvec2> Integrator::computeEquidistantMaxStreamline(const dvec2& start
     bool uncompleteStreamline = true;
     double step = - stepSize; //backward direction: step = -stepSize
     while (uncompleteStreamline) {
-        dvec2 normalizedVelocity = glm::normalize(RK4(vectorField, currentPoint, step));
+        dvec2 velocity = RK4(vectorField, currentPoint, step);
+        dvec2 normalizedVelocity = glm::normalize(velocity);
         dvec2 nextPoint = currentPoint + step * normalizedVelocity;
         uncompleteStreamline = (nextPoint[0] <= BBoxMax_[0]) && (nextPoint[0] >= BBoxMin_[0] )&& ((nextPoint[1] <= BBoxMax_[1])) && (nextPoint[1] >= BBoxMin_[1]) 
-                                && (glm::length(normalizedVelocity) != 0) && (glm::length(nextPoint - startPoint) >= eps);
+                                && (glm::length(normalizedVelocity) != 0) && (glm::length(nextPoint - startPoint) >= eps) && (glm::length(velocity) >= minVelocity);
         if (uncompleteStreamline) {
             currentPoint = nextPoint; 
             streamline.push_front(currentPoint);
