@@ -288,37 +288,41 @@ vec4 Topology::classifyCriticalPoints(const vec2 pos, const VectorField2 vectorF
     double R2 = eigenResult.eigenvaluesRe[1];
     double I1 = eigenResult.eigenvaluesIm[0];
     double I2 = eigenResult.eigenvaluesIm[1];
-    
+
+    /*std::cout << "position" << pos << std::endl;
+    std::cout << "jacobian " << jacobian << std::endl;
+    std::cout << "eigenvaluesRe " << eigenResult.eigenvaluesRe << std::endl;
+    std::cout << "eigenvaluesIm " << eigenResult.eigenvaluesIm << std::endl;*/
+
+    double eps = 1e-5;
     // Calculate eigenvalues, real and imaginary parts R1, R2, I1, I2
-    if ((I1==I2)&&(I1==0)&&(R1*R2<0)){
+    if ((abs(I2)<=eps)&&(abs(I1)<=eps)&&(R1*R2<0)){
         //std::cout << "Saddle in position " << pos << ": " << R1 << "," << R2 << "," << I1 << "," << I2 << std::endl;
         //compute separatrices for the saddle and add them to separatrices
-        std::cout << "found saddle" << std::endl;
         std::vector<std::deque<dvec2> > separatricesSaddle = computeSeparatrices(pos, vectorField, eigenResult.eigenvectors);
-        std::cout << "computed separatrices" << std::endl;
         for (int i = 0; i < separatricesSaddle.size(); i++) {
             separatrices.push_back(separatricesSaddle[i]);
         }
-        std::cout << "added separatrices" << std::endl;
         
         return ColorsCP[0];}//'Saddlepoint'
-    if ((I1==I2)&&(I1==0)&&(R1>0)&&(R2>0)){
+    if ((abs(I2)<=eps)&&(abs(I1)<=eps)&&(R1>0)&&(R2>0)){
         //std::cout << "Repelling Node in position " << pos << ": " << R1 << "," << R2 << "," << I1 << "," << I2 << std::endl;
         return ColorsCP[2];} //'Repelling Node'
-    if ((I1==I2)&&(I1==0)&&(R1<0)&&(R2<0)){
+    if ((abs(I2)<=eps)&&(abs(I1)<=eps)&&(R1<0)&&(R2<0)){
         //std::cout << "Attracting Node in position " << pos << ": " << R1 << "," << R2 << "," << I1 << "," << I2 << std::endl;
         return ColorsCP[1];} //'Attracting Node'
-    if ((R1==R2)&&(R1==0)&&(I1==-I2)&&(I2!=0)){
+    if ((abs(R2)<=eps)&&(abs(R1)<=eps)&&(abs(I1+I2)<=eps)&&(I2!=0)){
         //std::cout << "Center in position " << pos << ": " << R1 << "," << R2 << "," << I1 << "," << I2 << std::endl;
         return ColorsCP[5];} //'Center'
-    if ((R1==R2)&&(R1<0)&&(I1==-I2)&&(I2!=0)){
+    if ((abs(R1-R2)<=eps)&&(R1<0)&&(abs(I1+I2)<=eps)&&(I2!=0)){
         //std::cout << "Attracting in position " << pos << ": " << R1 << "," << R2 << "," << I1 << "," << I2 << std::endl;
         return ColorsCP[3];} //'Attracting Focus'
-    if ((R1==R2)&&(R1>0)&&(I1==-I2)&&(I2!=0)){
+    if ((abs(R1-R2)<=eps)&&(R1>0)&&(abs(I1+I2)<=eps)&&(I2!=0)){
         //std::cout << "Repelling focus in position " << pos << ": " << R1 << "," << R2 << "," << I1 << "," << I2 << std::endl;
         return ColorsCP[4];} //'Repelling Focus'
-    else 
+    else //return transparent color
         std::cout << "PROBLEM at position" << pos << ": " << R1 << "," << R2 << "," << I1 << "," << I2 << std::endl;;
+        return vec4(0, 0, 0, 0);
 }
 
 std::vector<std::deque<dvec2> > Topology::computeSeparatrices(dvec2 saddle, const VectorField2 vectorField, mat2 eigenvectors) {
@@ -345,7 +349,6 @@ std::vector<std::deque<dvec2> > Topology::computeSeparatrices(dvec2 saddle, cons
         streamline.push_front(saddle);
         streamline.push_front(position);*/
         std::deque<dvec2> streamline = Integrator::computeEquidistantMaxStreamline(position, vectorField, stepSize, minVelocity);
-        std::cout << "streamline size: " << streamline.size() << std::endl;;
         separatrices.push_back(streamline);
     }
     return separatrices;
