@@ -49,6 +49,7 @@ Topology::Topology()
 // propertyName("propertyIdentifier", "Display Name of the Propery",
 // default value (optional), minimum value (optional), maximum value (optional), increment
 // (optional)); propertyIdentifier cannot have spaces
+    , propBoundarySwitchPoint("BoundarySwitchPoint", "Boundary Switch Point")
 {
     // Register Ports
     addPort(outMesh);
@@ -57,6 +58,7 @@ Topology::Topology()
 
     // TODO: Register additional properties
     // addProperty(propertyName);
+    addProperty(propBoundarySwitchPoint);
 }
 
 void Topology::process() {
@@ -124,49 +126,33 @@ void Topology::process() {
         }
     }
 
-    //Integrator::drawPoint(const dvec2& p, const vec4& color, IndexBufferRAM* indexBuffer,
-    //                       std::vector<BasicMesh::Vertex>& vertices) 
-
-
-    // Integrate all separatrices.
-
-    /*
-    //change of sign test
-    dvec2 v1 = vectorField.interpolate(vec2(BBoxMin[0], BBoxMin[1])); //down left
-    dvec2 v2 = vectorField.interpolate(vec2(BBoxMax[0], BBoxMin[1])); //down right
-    dvec2 v3 = vectorField.interpolate(vec2(BBoxMax[0], BBoxMax[1])); //up right
-    dvec2 v4 = vectorField.interpolate(vec2(BBoxMin[0], BBoxMax[1])); //up left
-
-    double err = pow(10,5)*/
-
-
-    size2_t dims = vectorField.getNumVerticesPerDim();
-    //std::cout << "vector fild dimensions ";
-    //std::cout << dims << endl;
-
-    // Looping through all values in the vector field.
-    for (size_t j = 0; j < dims[1]; ++j) {
-        for (size_t i = 0; i < dims[0]; ++i) {
-            dvec2 vectorValue = vectorField.getValueAtVertex(size2_t(i, j));
-            dvec2 alsoVectorValue = vectorField.interpolate(cellPosition(i, j, vectorField));
-            //std::cout << "sanity check: " << vectorValue << "=" << alsoVectorValue << std::endl;
-            // for (int k = 0 ; k < dims[0] ; k++) {
-            //     dvec2 vectorValue = vectorField.interpolate(cellPosition(i+k/(double)dims[0], j+k/(double)dims[0], vectorField));
-            //     //std::cout << "vector(" << i+k/(double)dims[0] << "," << j+k/(double)dims[0] << "): " << vectorValue << std::endl;
-            // }
-            //std::cout << "vector(" << i << "," << j << "): " << vectorValue << std::endl;
+    //draw boundary switch points
+    if(propBoundarySwitchPoint) {
+        vec4 grey = vec4(0.5, 0.5, 0.5, 1);
+        std::vector<dvec2> switchPointsLeft = extractBoundarySwitchPoints(vectorField, BBoxMin, vec2(BBoxMin[0], BBoxMax[1])); //vertical left
+        std::vector<dvec2> switchPointsRight = extractBoundarySwitchPoints(vectorField, vec2(BBoxMax[0], BBoxMin[1]), BBoxMax); //vertical right
+        std::vector<dvec2> switchPointsUp = extractBoundarySwitchPoints(vectorField, vec2(BBoxMin[0], BBoxMax[1]), BBoxMax); //horizontal top
+        std::vector<dvec2> switchPointsDown = extractBoundarySwitchPoints(vectorField, BBoxMin, vec2(BBoxMax[0], BBoxMin[1])); //horizontal top
+        std::vector< std::vector<dvec2> > switchPointsVectors = {switchPointsLeft, switchPointsRight, switchPointsUp, switchPointsDown};
+        for (std::vector<dvec2> switchPointsVector: switchPointsVectors) {
+            //draw switch point
+            for (dvec2 switchPoint: switchPointsVector) {
+                Integrator::drawPoint(switchPoint, grey, indexBufferPoints.get(), vertices);
+                //integrate its seperatrice and draw them
+                mat2 eigenvectorsJacobian = util::eigenAnalysis(vectorField.derive(switchPoint)).eigenvectors;
+                std::vector<std::deque<dvec2> > separatrices = computeSeparatrices(switchPoint, vectorField, eigenvectorsJacobian);
+                for (int i = 0; i < separatrices.size(); i++) {
+                    //draw each separatrice
+                    auto indexBufferSeparatrices = mesh->addIndexBuffer(DrawType::Lines, ConnectivityType::Strip);
+                    for (int i_sep = 0; i_sep < separatrices[i].size(); i_sep++) {
+                        Integrator::drawNextPointInPolyline(separatrices[i][i_sep], grey, indexBufferSeparatrices.get(), vertices);            
+                    }
+                }
+            }
         }
     }
 
-    std::cout << "bounding box: " << BBoxMin << "   " << BBoxMax << std::endl;
-    std::cout << "dims: " << dims << std::endl;
-    /*
-    for (size_t j = 0; j < dims[1]; ++j) {
-        for (size_t i = 0; i < dims[0]; ++i) {
-            std::cout << "cell(" << i << "," << j << "): " << cellPosition(i, j, vectorField) << std::endl;
-            
-        }
-    }*/
+
     // Other helpful functions
     // dvec2 pos = vectorField.getPositionAtVertex(size2_t(i, j));
     // Computing the jacobian at a position
@@ -207,7 +193,6 @@ std::vector<dvec2> Topology::extractCriticalPoints(const VectorField2 vectorFiel
             std::queue<std::vector<dvec2> > cornersQueue;
             cornersQueue.push(initial_corners);
             while (!cornersQueue.empty()) {
-                //std::cout << "queue size (" << i << "," << j << "): " << cornersQueue.size() << std::endl;
                 //extract one subcell from the queue
                 std::vector<dvec2> bottomLeftAndTopRight = cornersQueue.front();
                 dvec2 bottomLeft = bottomLeftAndTopRight[0];
@@ -219,13 +204,10 @@ std::vector<dvec2> Topology::extractCriticalPoints(const VectorField2 vectorFiel
                 corners.push_back(vec2(topRight[0], bottomLeft[1])); //bottom right
                 corners.push_back(vec2(bottomLeft[0], topRight[1])); //top left
                 corners.push_back(topRight); //top right
-                //std::cout << "corners:" << corners[0] << "    " << corners[1] << "    " << corners[2] << "    " << corners[3] << std::endl;
-                //std::cout << "values at corners: " << vectorField.interpolate(corners[0]) << "  " << vectorField.interpolate(corners[1]) << "  " << vectorField.interpolate(corners[2]) << "  " << vectorField.interpolate(corners[3]) << std::endl;
                 //check for zero at the corner or for possible zero in one of the subcells
                 bool zeroFound = false;
                 ivec2 signChanges = vec2(0, 0); //signChanges[i] = 1 if component i has a sign change
                 findZerosAndSignChanges(criticalPoints, zeroFound, signChanges, corners, vectorField, eps);
-                //std::cout << "sign change (" << i << "," << j << "): " << signChanges << std::endl;
                 //if there is a possible zero, queue all four subcells
                 if (!zeroFound) {//if a zero was found, we do not queue anything
                     if ((signChanges[0] == 1) && (signChanges[1] == 1)) {//sign change => possible zeros
@@ -239,7 +221,6 @@ std::vector<dvec2> Topology::extractCriticalPoints(const VectorField2 vectorFiel
 
                 }
                 else {
-                    //std::cout << "Zero found!" << std::endl;
                     break;
                 }
             }
@@ -254,7 +235,6 @@ void Topology::findZerosAndSignChanges(std::vector<dvec2>& criticalPoints, bool&
     ivec2 lastSign = vec2(0, 0); //sign(0) = 0, sign(x < 0) = -1, sign(x > 0) = 1
     for (int i_corner = 0; i_corner < 4; i_corner++) {
         vec2 valueAtCorner = vectorField.interpolate(corners[i_corner]);
-        //std::cout << "value at " << corners[i_corner] << " : " << valueAtCorner << std::endl;
         //check if value is close enough to zero
         if (glm::length(valueAtCorner) <= eps) {//zero found
             criticalPoints.push_back(corners[i_corner]);
@@ -264,7 +244,6 @@ void Topology::findZerosAndSignChanges(std::vector<dvec2>& criticalPoints, bool&
         else { //check for sign change and update related variables
             //get signs of both components of the vector
             ivec2 currentSign = vec2(sgn(valueAtCorner[0]), sgn(valueAtCorner[1]));
-            //std::cout << "currentSign: " << currentSign << std::endl; 
             for (int i_component = 0; i_component < 2; i_component++) {
                 //check for sign change
                 if (currentSign[i_component]*lastSign[i_component] < 0) {//sign change
@@ -277,7 +256,6 @@ void Topology::findZerosAndSignChanges(std::vector<dvec2>& criticalPoints, bool&
             }
         }                   
     }
-    //std::cout << "sign change in function: " << signChanges << std::endl;
 }
 
 
@@ -288,11 +266,6 @@ vec4 Topology::classifyCriticalPoints(const vec2 pos, const VectorField2 vectorF
     double R2 = eigenResult.eigenvaluesRe[1];
     double I1 = eigenResult.eigenvaluesIm[0];
     double I2 = eigenResult.eigenvaluesIm[1];
-
-    /*std::cout << "position" << pos << std::endl;
-    std::cout << "jacobian " << jacobian << std::endl;
-    std::cout << "eigenvaluesRe " << eigenResult.eigenvaluesRe << std::endl;
-    std::cout << "eigenvaluesIm " << eigenResult.eigenvaluesIm << std::endl;*/
 
     double eps = 1e-5;
     // Calculate eigenvalues, real and imaginary parts R1, R2, I1, I2
@@ -330,7 +303,6 @@ std::vector<std::deque<dvec2> > Topology::computeSeparatrices(dvec2 saddle, cons
     //integration variables (maybe to put as parameters in inviwo?)
     double stepSizeInitial = 0.01;
     double stepSize = 0.01;
-    bool normalizeVelocity = true;
     double minVelocity = 0.01;
 
     //for each direction, compute the streamline
@@ -338,21 +310,37 @@ std::vector<std::deque<dvec2> > Topology::computeSeparatrices(dvec2 saddle, cons
     //std::vector<dvec2> directions = {eigenvectors[1]};
     for (int i = 0; i < directions.size(); i++) {
         //take a step in the direction
-        /*
-        dvec2 velocity = Integrator::RK4(vectorField, saddle, stepSizeInitial, normalizeVelocity, directions[i]);
-        dvec2 normalizedVelocity = vec2(velocity[0], velocity[1]);
-        if (normalizeVelocity) normalizedVelocity = glm::normalize(velocity);
-        dvec2 position = saddle + 10*stepSize * normalizedVelocity;*/
         dvec2 position = saddle + stepSizeInitial * glm::normalize(directions[i]); //Euler step
         //integrate the streamline from the new position
-        /*std::deque<dvec2> streamline;
-        streamline.push_front(saddle);
-        streamline.push_front(position);*/
         std::deque<dvec2> streamline = Integrator::computeEquidistantMaxStreamline(position, vectorField, stepSize, minVelocity);
         separatrices.push_back(streamline);
     }
     return separatrices;
 }
+
+std::vector<dvec2> Topology::extractBoundarySwitchPoints(const VectorField2 vectorField, const vec2 startPoint, const vec2 endPoint) {
+    std::vector<dvec2> boundarySwitchPoints;
+    size2_t dims = vectorField.getNumVerticesPerDim();
+    //we will look for a zero in the dimension (0 or 1) of the vector field that is perpendicular to the edge
+    int dim = (int) (startPoint[0]!=endPoint[0]); //dim = 1 for a horizontal edge and dim = 0 for a vertical egde
+
+    // Looping through all values on the boundaries in the vector field
+    for (size_t i = 0; i < dims[dim] - 1; ++i) {
+            //for each line segment i, we do domain decomposition to check for a boundary switch point
+            //we stop when the vector field component is close enough to zero
+            vec2 left = startPoint + i/(double)(dims[dim]-1) * (endPoint - startPoint);
+            vec2 right = startPoint + (i+1)/(double)(dims[dim]-1) * (endPoint - startPoint);
+            double valueLeft = vectorField.interpolate(left)[dim];
+            double valueRight = vectorField.interpolate(right)[dim];
+
+            if ((valueLeft - valueRight != 0)&&(valueLeft * valueRight <= 0)) { //we know this is linear interpolation
+                vec2 root = left - valueLeft / (valueRight - valueLeft) * (right - left); 
+                boundarySwitchPoints.push_back(root);
+            }
+    }
+    return boundarySwitchPoints;
+}
+
 
 dvec2 Topology::cellPosition(double i, double j, const VectorField2 vectorField) {
     const dvec2 BBoxMin = vectorField.getBBoxMin();

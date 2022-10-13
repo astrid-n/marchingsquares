@@ -78,7 +78,7 @@ protected:
                                 IndexBufferRAM* indexBuffer,
                                 std::vector<BasicMesh::Vertex>& vertices);
     std::vector<std::deque<dvec2> > computeSeparatrices(dvec2 saddle, const VectorField2 vectorField, mat2 eigenvectors);
-
+    std::vector<dvec2> extractBoundarySwitchPoints(const VectorField2 vectorField, const vec2 startPoint, const vec2 endPoint);
     // Ports
 public:
     // Input data
@@ -89,6 +89,10 @@ public:
 
 	// Output mesh for bounding box and gridlines
     MeshOutport meshBBoxOut;
+
+    //Properties
+public:
+    BoolProperty propBoundarySwitchPoint;
 
 };  // namespace inviwo
 
